@@ -33,27 +33,39 @@ public class databaseManager {
 				
 				st = con.createStatement();
 				rs = st.executeQuery("SELECT * from `shortinfo` where `houseid`='"+item.getHouseID()+"' order by `id` desc");
-
+				
+				boolean showHistory = true;
+				
 				if (rs.next()) 
 				{
 					//System.out.println("Entry with houseID 29d252be6ffbb1830b2cc4001383a45997d was found");
 					//an item with the following id already exists check if update happend
 					if(item.equalsToSQLRow(rs))
 					{
-						logger.info("Nothing to do for houseID: " + item.getHouseID());
+						logger.debug("Nothing to do for houseID: " + item.getHouseID());
+						showHistory = false;
 					}
 					else
 					{
-						logger.info("Adding newer entry for houseID: " + item.getHouseID());
+						
+						//logger.info("Adding newer entry for houseID: " + item.getHouseID());
+						logger.info(item.toString() + " changed price from " + rs.getString("price") + " at date: " + rs.getString("date"));
 						insertToDatabase(item);
 					}
 					
 				}
 				else
 				{
-					logger.info("Adding a new entry for houseID: " + item.getHouseID());
+					logger.info("Adding new house: " + item.toString());
 					insertToDatabase(item);
 				}
+				
+				//Write the house history to screen
+				while(rs.next() && showHistory)
+				{
+					logger.info("History: " + item.toString() + " changed price from " + rs.getString("price") + " at date: " + rs.getString("date"));
+				}
+				
 				
 				if (rs != null) {
 					rs.close();

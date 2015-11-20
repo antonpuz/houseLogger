@@ -37,8 +37,7 @@ public class yad2ShortEntry {
 				address.equals(rs.getString("address")) &&
 				price.equals(rs.getString("price")) &&
 				rooms.equals(rs.getString("rooms")) &&
-				floor.equals(rs.getString("floor")) &&
-				date.equals(rs.getString("date")) );
+				floor.equals(rs.getString("floor"))  );
 	}
 	
 	public String getHouseID()
@@ -53,4 +52,10 @@ public class yad2ShortEntry {
 		
 	}
 	
+	
+	public String toString()
+	{
+		return String.format("House with Yad2ID: %s, of type %s located at %s, on %s floor with %s rooms posted on %s for %s", 
+				houseID, kind, address, floor, rooms, date, price);
+	}
 }
