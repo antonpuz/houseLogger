@@ -2,6 +2,9 @@ package houseLogger;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Vector;
 
 public class yad2ShortEntry {
 	private String houseID;
@@ -47,7 +50,7 @@ public class yad2ShortEntry {
 
 	public String prepareInsertQuery(String table) {
 		
-		return String.format("insert into `%s` values (0,'%s','%s','%s','%s','%s','%s','%s')", 
+		return String.format("insert into `%s` values (0,'%s','%s','%s','%s','%s','%s','%s', 'false')", 
 				table, houseID, kind, address, price, rooms, floor, date);
 		
 	}
@@ -57,5 +60,14 @@ public class yad2ShortEntry {
 	{
 		return String.format("House with Yad2ID: %s, of type %s located at %s, on %s floor with %s rooms posted on %s for %s", 
 				houseID, kind, address, floor, rooms, date, price);
+	}
+	
+	public static void removeIDsFromList(Vector<yad2ShortEntry> v, LinkedList<String> databaseHousesID)
+	{
+		Iterator i = v.iterator();
+		while (i.hasNext()) {
+			yad2ShortEntry tmp = (yad2ShortEntry)i.next();
+			databaseHousesID.remove(tmp.getHouseID());
+		}
 	}
 }

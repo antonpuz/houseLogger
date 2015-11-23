@@ -6,9 +6,12 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Vector;
@@ -19,6 +22,7 @@ public class houseLogger {
 	
 	private static Logger logger;
 	private static databaseManager dm;
+	private static HashMap<String, String> area2url;
 	
 	public static void main(String[] args) {
 		//initialize all global items
@@ -40,13 +44,13 @@ public class houseLogger {
 		switch(myint)
 		{
 		case 1:
-			String fileNameWithSource = "1.html";
+			String fileNameWithSource = "3.html";
 			System.out.println("Reading content from file: " + fileNameWithSource);
 			filesManager fileParser = new filesManager(logger, fileNameWithSource);
 			v = fileParser.parseFile();
 			
 			if(v != null)
-				dm.updateQueries(v);
+				dm.updateQueries(v, "shortinfo");
 			
 //			//check for additional pages
 //			LinkedList<String> links2 = fileParser.getPages();
@@ -58,7 +62,29 @@ public class houseLogger {
 //			}
 			break;
 		case 2:
-			String websiteWithSource = "http://www.yad2.co.il/Nadlan/sales.php?City=%E1%E0%F8+%F9%E1%F2&Neighborhood=%F8%EE%E5%FA&HomeTypeID=&fromRooms=&untilRooms=&fromPrice=100000&untilPrice=1600000&PriceType=1&FromFloor=-1&ToFloor=-1&Info=";
+			//String websiteWithSource = "http://www.yad2.co.il/Nadlan/sales.php?City=%E1%E0%F8+%F9%E1%F2&Neighborhood=%F8%EE%E5%FA&HomeTypeID=&fromRooms=&untilRooms=&fromPrice=100000&untilPrice=1600000&PriceType=1&FromFloor=-1&ToFloor=-1&Info=";
+			String websiteWithSource;
+			HashMap<Integer, String> areas = new HashMap<Integer, String>();
+			HashMap<Integer, String> areaName = new HashMap<Integer, String>();
+			LinkedList<String> databaseHousesID = null;
+			
+			System.out.println("Choose the wanted area: ");
+			int areaID = 0;
+			for (Map.Entry<String, String> entry : area2url.entrySet())
+			{
+			    System.out.println(areaID + ": " + entry.getKey());
+			    areaName.put(areaID, entry.getKey());
+			    areas.put(areaID++, entry.getValue());
+			}
+			
+			areaID = keyboard.nextInt();
+			if(areaID > areas.size() || areaID < 0)
+			{
+				System.out.println("Area ID doesnt exist");
+				return;
+			}
+			websiteWithSource = areas.get(areaID);
+			
 			System.out.println("Reading content from website: " + websiteWithSource);
 			webRobot robot;
 			try {
@@ -66,9 +92,13 @@ public class houseLogger {
 				String data = robot.getSource(websiteWithSource);
 				stringParser strParser = new stringParser(logger, data);
 				v = strParser.parseStringData();
+				databaseHousesID = dm.getHouseIDs(areaName.get(areaID));
 				
-				if(v != null)
-					dm.updateQueries(v);
+				if(v == null)
+					System.out.println("Something went wrong with parseStringData");
+					
+				dm.updateQueries(v, areaName.get(areaID));
+				yad2ShortEntry.removeIDsFromList(v, databaseHousesID);
 				
 				//check for additional pages
 				LinkedList<String> links = strParser.getPages();
@@ -85,14 +115,25 @@ public class houseLogger {
 					strParser = new stringParser(logger, data);
 					v = strParser.parseStringData();
 					
-					if(v != null)
-						dm.updateQueries(v);
+					if(v == null)
+						System.out.println("Something went wrong with parseStringData");
+					
+					dm.updateQueries(v, areaName.get(areaID));
+					yad2ShortEntry.removeIDsFromList(v, databaseHousesID);
 				}
 				
 			} catch (AWTException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 				v = null;
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			if(!databaseHousesID.isEmpty())
+			{
+				dm.updateDeletedEntries(databaseHousesID, areaName.get(areaID));
 			}
 			
 			break;
@@ -111,6 +152,9 @@ public class houseLogger {
 	{
 		logger=Logger.getLogger("LoggingExample");
 		dm = new databaseManager(logger);
+		
+		area2url = new HashMap<String, String>();
+		area2url.put("ramot", "http://www.yad2.co.il/Nadlan/sales.php?City=%E1%E0%F8+%F9%E1%F2&Neighborhood=%F8%EE%E5%FA&HomeTypeID=&fromRooms=&untilRooms=&fromPrice=100000&untilPrice=1600000&PriceType=1&FromFloor=-1&ToFloor=-1&Info=");
 	}
 
 }

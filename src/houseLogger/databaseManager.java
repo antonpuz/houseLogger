@@ -2,6 +2,8 @@ package houseLogger;
 
 import java.sql.*;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Vector;
 
 import org.apache.log4j.Logger;
@@ -16,8 +18,51 @@ public class databaseManager {
 	public databaseManager(Logger globalLogger) {
 		logger = globalLogger;
 	}
+	
+	public LinkedList<String> getHouseIDs(String table) throws SQLException
+	{
+		LinkedList<String> result = new LinkedList<String>();
+		Connection con = null;
+		Statement st = null;
+		ResultSet rs = null;
+		
+		con = DriverManager.getConnection(url, user, password);
+			
+		st = con.createStatement();
+		rs = st.executeQuery("SELECT `houseid` from `"+table+"`");
+		
+		while(rs.next()) 
+		{
+			result.add(rs.getString("houseid"));
+		}
+		
+		if (rs != null) {
+			rs.close();
+		}
+		if (st != null) {
+			st.close();
+		}
 
-	public void updateQueries(Vector<yad2ShortEntry> data) {
+		try {
+			if (rs != null) {
+				rs.close();
+			}
+			if (st != null) {
+				st.close();
+			}
+			if (con != null) {
+				con.close();
+			}
+
+		} catch (SQLException ex) {
+			logger.error(ex.getMessage());
+		}
+		
+		return result;
+
+	}
+	
+	public void updateQueries(Vector<yad2ShortEntry> data, String table) {
 
 		Connection con = null;
 		Statement st = null;
@@ -32,7 +77,7 @@ public class databaseManager {
 				yad2ShortEntry item = (yad2ShortEntry) dataIterator.next();
 				
 				st = con.createStatement();
-				rs = st.executeQuery("SELECT * from `shortinfo` where `houseid`='"+item.getHouseID()+"' order by `id` desc");
+				rs = st.executeQuery("SELECT * from `"+table+"` where `houseid`='"+item.getHouseID()+"' order by `id` desc");
 				
 				boolean showHistory = true;
 				
@@ -50,14 +95,14 @@ public class databaseManager {
 						
 						//logger.info("Adding newer entry for houseID: " + item.getHouseID());
 						logger.info(item.toString() + " changed price from " + rs.getString("price") + " at date: " + rs.getString("date"));
-						insertToDatabase(item);
+						insertToDatabase(item, table);
 					}
 					
 				}
 				else
 				{
 					logger.info("Adding new house: " + item.toString());
-					insertToDatabase(item);
+					insertToDatabase(item, table);
 				}
 				
 				//Write the house history to screen
@@ -99,7 +144,7 @@ public class databaseManager {
 
 	}
 	
-	private static void insertToDatabase(yad2ShortEntry data)
+	private static void insertToDatabase(yad2ShortEntry data, String table)
 	{
 		Connection con = null;
 		Statement st = null;
@@ -109,7 +154,7 @@ public class databaseManager {
 			con = DriverManager.getConnection(url, user, password);
 			
 			st = con.createStatement();
-			rs = st.execute(data.prepareInsertQuery("shortinfo"));
+			rs = st.execute(data.prepareInsertQuery(table));
 			
 			if (rs) 
 			{
@@ -168,6 +213,68 @@ public class databaseManager {
 				logger.error(ex.getMessage());
 			}
 		}
+	}
+
+	public void updateDeletedEntries(LinkedList<String> databaseHousesID, String table) {
+		
+		Connection con = null;
+		Statement st = null;
+		ResultSet rs = null;
+		
+		try {
+			con = DriverManager.getConnection(url, user, password);
+			
+			ListIterator<String> listIterator = databaseHousesID.listIterator();
+			while (listIterator.hasNext()) {
+				//System.out.println(listIterator.next());
+				
+				String houseid = listIterator.next();
+				
+				st = con.createStatement();
+				rs = st.executeQuery("SELECT * from `"+table+"` where `houseid` = '"+houseid+"'");
+				
+				if(rs.next())
+				{
+					System.out.println(String.format("House with ID: %s was deleted, type: %s, located at: %s, sold for %s on %s", rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(8)));
+				}
+				
+				if (rs != null) {
+					rs.close();
+				}
+				if (st != null) {
+					st.close();
+				}
+				
+				st = con.createStatement();
+				st.execute("UPDATE `"+table+"` set `deleted`='true' where `houseid`='"+houseid+"'");
+			}
+
+			
+			
+
+			try {
+				if (rs != null) {
+					rs.close();
+				}
+				if (st != null) {
+					st.close();
+				}
+				if (con != null) {
+					con.close();
+				}
+
+			} catch (SQLException ex) {
+				logger.error(ex.getMessage());
+			}
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		
+		
+		return;
+		
 	}
 
 }
